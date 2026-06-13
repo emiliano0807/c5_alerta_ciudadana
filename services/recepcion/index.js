@@ -7,7 +7,7 @@ const path = require('path');
 // CONFIGURACIÓN DE ENTORNO (Fácilmente escalable)
 // ==========================================
 const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://localhost:1883';
-const MQTT_TOPIC = process.env.MQTT_TOPIC || 'esp32/alerts';
+const MQTT_TOPIC = process.env.MQTT_TOPIC || 'c5/alerts';
 const GEOLOCATION_GRPC_URI = process.env.GEOLOCATION_GRPC_URI || 'localhost:50051';
 
 // ==========================================
@@ -73,18 +73,28 @@ mqttClient.on('message', (topic, message) => {
 
 // Función validadora de campos requeridos
 function validateAlertFormat(data) {
-    const requiredFields = ['id', 'gps', 'timestamp', 'type'];
-    return requiredFields.every(field => data.hasOwnProperty(field) && data[field] !== null && data[field] !== '');
+    const requiredFields = ['device_id', 'coordinates', 'timestamp', 'emergency_type'];
+    const hasMainFields = requiredFields.every(field => data.hasOwnProperty(field) && data[field] !== null && data[field] !== '');
+
+    if (!hasMainFields) return false;
+
+    // Validación de profundidad para las coordenadas
+    if (!data.coordinates.lat || !data.coordinates.lon) return false;
+
+    return true;
 }
 
 // Función encargada del envío por gRPC
 function sendToGeolocationService(data) {
     // Definimos el payload que acepta nuestro archivo .proto
     const payload = {
-        id: String(data.id),
-        gps: String(data.gps),
+        device_id: String(data.device_id),
+        coordinates: {
+            lat: String(data.coordinates.lat),
+            lon: String(data.coordinates.lon)
+        },
         timestamp: String(data.timestamp),
-        type: String(data.type)
+        emergency_type: String(data.emergency_type)
     };
 
     console.log(`[gRPC] Enviando datos a MS Geolocalización...`);
