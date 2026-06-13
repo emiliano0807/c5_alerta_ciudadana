@@ -2,6 +2,7 @@ const mqtt = require('mqtt');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
+const axios = require('axios');
 
 // ==========================================
 // CONFIGURACIÓN DE ENTORNO (Fácilmente escalable)
@@ -107,8 +108,22 @@ function sendToGeolocationService(data) {
         }
 
         if (response.success) {
-            console.log(`[gRPC Éxito] Dato enriquecido recibido:`, response.location_details);
-            // Aquí continuarías enviándolo a la "siguiente etapa" mencionada (ej. publicar en colas de mensajes o BD)
+            console.log(`[gRPC Éxito] Dato enriquecido recibido.`);
+
+            // Armamos el objeto final para mandar a Prioridad
+            const payloadParaPrioridad = {
+                device_id: payload.device_id,
+                coordinates: payload.coordinates,
+                timestamp: payload.timestamp,
+                emergency_type: payload.emergency_type,
+                location_details: JSON.parse(response.location_details)
+            };
+
+            // Petición REST al MS de Prioridad
+            axios.post('http://prioridad:3000/api/prioridad', payloadParaPrioridad)
+                .then(res => console.log('[Gateway] Alerta enviada a Prioridad exitosamente.'))
+                .catch(err => console.error('[Gateway] Error enviando a Prioridad:', err.message));
+                
         } else {
             console.warn(`[gRPC Aviso] El MS procesó pero devolvió un estado fallido:`, response.message);
         }
