@@ -18,7 +18,7 @@ El microservicio de notificaciones actúa en la capa de salida y visualización 
 
 ## 2. Resiliencia y Tolerancia a Fallos
 
-El servicio incorpora tres estrategias lógicas esenciales para garantizar la robustez e integridad de la comunicación crítica de emergencias (conforme a las directrices de diseño descritas en el [ADR-002: Redundancia con Redis](file:///home/maxxow/Repos/c5_alerta_ciudadana/Docs/adr/ADR-002-redis.md)):
+El servicio incorpora tres estrategias lógicas esenciales para garantizar la robustez e integridad de la comunicación crítica de emergencias.
 
 ### A. Prevención de Pérdida de Eventos (Condición de Carrera)
 Para evitar la pérdida de eventos de emergencia cuando no existen terminales de operadores activas:
@@ -77,7 +77,7 @@ El servidor emite notificaciones a través de la conexión persistente TCP de So
 
 ## 5. Configuración de Despliegue (Docker Compose)
 
-En producción y desarrollo, el servicio se despliega a través del archivo principal [docker-compose.yaml](file:///home/maxxow/Repos/c5_alerta_ciudadana/docker-compose.yaml) utilizando una imagen ligera de Node y montaje de volúmenes para el soporte de cambios en tiempo real:
+En producción y desarrollo, el servicio se despliega a través del archivo principal. utilizando una imagen ligera de Node y montaje de volúmenes para el soporte de cambios en tiempo real:
 
 ```yaml
   notificaciones:
@@ -102,7 +102,7 @@ En producción y desarrollo, el servicio se despliega a través del archivo prin
 
 ## 6. Dependencias del Proyecto
 
-De acuerdo con el archivo [package.json](file:///home/maxxow/Repos/c5_alerta_ciudadana/services/notificaciones/package.json), las dependencias instaladas son:
+Las dependencias instaladas son:
 
 * `express` (`^5.2.1`): Servidor HTTP base.
 * `redis` (`^6.0.0`): Conector principal de Redis (soporte para comandos v6+ como `rPop`).
