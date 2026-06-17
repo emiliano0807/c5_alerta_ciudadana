@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <TinyGPSPlus.h>
 #include <HardwareSerial.h>
+#include <time.h>
 
 // ==========================================
 // CONFIGURACIÓN DE RED Y MQTT
@@ -12,6 +13,9 @@ const char* password = "Isic2026??$";
 const char* mqtt_server = "192.168.2.118"; 
 const int mqtt_port = 1883;
 const char* mqtt_topic = "c5/alertas";
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = -21600; // Desfase de -6 horas (UTC-6) en segundos
+const int   daylightOffset_sec = 0; // Sin horario de verano
 
 // ==========================================
 // CONFIGURACIÓN DE HARDWARE Y GPS
@@ -67,6 +71,41 @@ void reconnect() {
   }
 }
 
+void sincronizarRelojNTP() {
+  Serial.print("Sincronizando reloj por NTP");
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  
+  struct tm timeinfo;
+  int intentos = 0;
+  
+  // Intentar obtener la hora hasta 15 veces
+  while (!getLocalTime(&timeinfo) && intentos < 15) {
+    Serial.print(".");
+    delay(1000);
+    intentos++;
+  }
+  
+  Serial.println();
+  if (intentos < 15) {
+    Serial.println("Reloj sincronizado exitosamente.");
+  } else {
+    Serial.println("ADVERTENCIA: Fallo al sincronizar el servidor NTP.");
+  }
+}
+
+String obtenerTimestamp() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    return "1970-01-01T00:00:00Z"; // Fallback por si pierde sincronizacion
+  }
+  
+  char timeStringBuff[30];
+  // Formatea la fecha al estandar ISO 8601 que espera tu backend en Node.js
+  strftime(timeStringBuff, sizeof(timeStringBuff), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+  
+  return String(timeStringBuff);
+}
+
 void sendAlert(int count) {
   StaticJsonDocument<256> doc;
   
@@ -75,19 +114,7 @@ void sendAlert(int count) {
   // Arreglo de caracteres para almacenar la fecha y hora formateada
   char timestamp[25];
   
-  // Verificamos si el GPS ya logró sincronizar el reloj satelital
-  if (gps.date.isValid() && gps.time.isValid()) {
-    snprintf(timestamp, sizeof(timestamp), "%04d-%02d-%02dT%02d:%02d:%02dZ",
-             gps.date.year(), gps.date.month(), gps.date.day(),
-             gps.time.hour(), gps.time.minute(), gps.time.second());
-    Serial.println("Reloj satelital sincronizado.");
-  } else {
-    // Fallback de emergencia si se presiona el botón antes de tener señal
-    snprintf(timestamp, sizeof(timestamp), "1970-01-01T00:00:00Z");
-    Serial.println("ADVERTENCIA: Reloj no sincronizado. Usando fecha epoch.");
-  }
-  
-  doc["timestamp"] = timestamp; 
+  doc["timestamp"] = obtenerTimestamp(); 
   
   JsonObject coords = doc.createNestedObject("coordinates");
   
@@ -119,6 +146,7 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   
   setup_wifi();
+  sincronizarRelojNTP();
   client.setServer(mqtt_server, mqtt_port);
 }
 
